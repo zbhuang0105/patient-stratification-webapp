@@ -13,20 +13,27 @@ st.set_page_config(
 
 # --- Data Loading (Cached for performance) ---
 @st.cache_resource
-def load_models_and_explainer(): 
+def load_models_and_explainer():
     model = joblib.load('streamlit_data/xgb_model.joblib')
     subcluster_model = joblib.load('streamlit_data/subcluster_model.joblib')
-    with open('streamlit_data/shap_data.pkl', 'rb') as f:
-        shap_data = pickle.load(f)
-    return model, subcluster_model, shap_data['explainer']
+    
+    # 关键改动：在运行时创建 explainer，而不是从文件中加载
+    # 我们需要先加载特征数据来创建它
+    X_df_for_explainer = pd.read_csv('streamlit_data/all_features.csv')
+    explainer = shap.Explainer(model, X_df_for_explainer)
+    
+    return model, subcluster_model, explainer
 
 @st.cache_data
 def load_data():
     X_df = pd.read_csv('streamlit_data/all_features.csv')
     Y = pd.read_csv('streamlit_data/all_labels.csv')['Group'].values
     mod_clustered_df = pd.read_csv('streamlit_data/mod_patients_clustered.csv')
+    
+    # 关键改动：现在只从 pkl 文件中加载 shap_values
     with open('streamlit_data/shap_data.pkl', 'rb') as f:
         shap_values = pickle.load(f)['shap_values']
+        
     return X_df, Y, mod_clustered_df, shap_values
 
 # --- Load all data ---
@@ -41,7 +48,7 @@ st.session_state['X_df'] = X_df
 st.session_state['Y'] = Y
 st.session_state['mod_clustered_df'] = mod_clustered_df
 st.session_state['shap_values'] = shap_values
-st.session_state['class_names'] = ['Mild', 'Moderate', 'Severe'] # Changed 'Mod' to 'Moderate'
+st.session_state['class_names'] = ['Mild', 'Moderate', 'Severe']
 st.session_state['feature_names'] = X_df.columns.tolist()
 
 
