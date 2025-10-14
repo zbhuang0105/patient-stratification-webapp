@@ -4,27 +4,24 @@ import numpy as np
 import shap
 import matplotlib.pyplot as plt
 
-# 关键改动 1: 从主应用文件导入初始化函数
+# 从主应用文件导入初始化函数
 try:
     from app import initialize_data
 except ImportError:
     st.error("Could not import the main app. Please ensure the file structure is correct.")
     st.stop()
 
-# 关键改动 2: 在页面加载时运行数据初始化
+# 在页面加载时运行数据初始化
 initialize_data()
-
-# --- 关键改动 3: 删除了 st.set_page_config() 这一行 ---
-# st.set_page_config(layout="wide") # <--- 这一行已被删除
 
 st.title("🔬 New Patient Prediction")
 
-# --- 检查数据是否加载成功 ---
+# 检查数据是否加载成功
 if 'model' not in st.session_state:
     st.error("Data could not be loaded. Please ensure the main app runs correctly and return to the main page.")
     st.stop()
 
-# --- 从 session_state 获取加载好的数据 ---
+# 从 session_state 获取加载好的数据
 model = st.session_state['model']
 subcluster_model = st.session_state['subcluster_model']
 explainer = st.session_state['explainer']
@@ -32,7 +29,7 @@ X_df = st.session_state['X_df']
 feature_names = st.session_state['feature_names']
 class_names = st.session_state['class_names']
 
-# --- 用户输入界面 ---
+# 用户输入界面
 st.header("Enter Patient Data")
 st.write("Use the fields below to enter the new patient's information.")
 
@@ -42,7 +39,7 @@ yes_no_map = {'Yes': 1, 'No': 0}
 input_data = {}
 cols = st.columns(3)
 
-# --- 动态生成输入框 ---
+# 动态生成输入框
 for i, feature in enumerate(feature_names):
     with cols[i % 3]:
         default_value = X_df[feature].mean()
@@ -51,6 +48,18 @@ for i, feature in enumerate(feature_names):
             default_gender_key = [k for k, v in gender_map.items() if v == default_gender_val][0]
             selected_gender = st.selectbox(label=feature, options=list(gender_map.keys()), index=list(gender_map.keys()).index(default_gender_key), key=feature)
             input_data[feature] = gender_map[selected_gender]
+        
+        # --- 关键改动：为 'Age' 添加特定处理 ---
+        elif feature == 'Age':
+            input_data[feature] = st.number_input(
+                label=feature, 
+                value=int(round(default_value)), # 将默认值转为整数
+                min_value=0,                      # 设置合理的最小值
+                max_value=120,                    # 设置合理的最小值
+                step=1,                           # 步长设为1
+                key=feature
+            )
+
         elif feature == 'MS':
             ms_options = [0, 1, 2, 3, 4, 5]
             default_ms = int(round(default_value))
@@ -64,9 +73,10 @@ for i, feature in enumerate(feature_names):
             selected_yn = st.selectbox(label=feature, options=list(yes_no_map.keys()), index=list(yes_no_map.keys()).index(default_yn_key), key=feature)
             input_data[feature] = yes_no_map[selected_yn]
         else:
+            # 其他所有数值型特征保持不变
             input_data[feature] = st.number_input(label=feature, value=float(default_value), format="%.2f", key=feature)
 
-# --- 预测按钮和结果展示 ---
+# 预测按钮和结果展示
 if st.button("Get Prediction", type="primary"):
     st.header("Prediction Results")
 
