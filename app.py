@@ -16,12 +16,9 @@ st.set_page_config(
 def load_models_and_explainer():
     model = joblib.load('streamlit_data/xgb_model.joblib')
     subcluster_model = joblib.load('streamlit_data/subcluster_model.joblib')
-    
-    # 关键改动：在运行时创建 explainer，而不是从文件中加载
-    # 我们需要先加载特征数据来创建它
     X_df_for_explainer = pd.read_csv('streamlit_data/all_features.csv')
-    explainer = shap.Explainer(model, X_df_for_explainer)
-    
+    background_data = shap.sample(X_df_for_explainer, 200)
+    explainer = shap.Explainer(model, background_data)
     return model, subcluster_model, explainer
 
 @st.cache_data
@@ -29,28 +26,32 @@ def load_data():
     X_df = pd.read_csv('streamlit_data/all_features.csv')
     Y = pd.read_csv('streamlit_data/all_labels.csv')['Group'].values
     mod_clustered_df = pd.read_csv('streamlit_data/mod_patients_clustered.csv')
-    
-    # 关键改动：现在只从 pkl 文件中加载 shap_values
     with open('streamlit_data/shap_data.pkl', 'rb') as f:
         shap_values = pickle.load(f)['shap_values']
-        
     return X_df, Y, mod_clustered_df, shap_values
 
-# --- Load all data ---
-model, subcluster_model, explainer = load_models_and_explainer()
-X_df, Y, mod_clustered_df, shap_values = load_data()
+# --- 关键改动：将数据加载和初始化封装成一个函数 ---
+def initialize_data():
+    # 检查session_state中是否已有数据，避免重复加载
+    if 'model' not in st.session_state:
+        st.toast("Loading models and data for the first time...")
+        # --- Load all data ---
+        model, subcluster_model, explainer = load_models_and_explainer()
+        X_df, Y, mod_clustered_df, shap_values = load_data()
 
-# --- Store data in session_state for sharing across pages ---
-st.session_state['model'] = model
-st.session_state['subcluster_model'] = subcluster_model
-st.session_state['explainer'] = explainer
-st.session_state['X_df'] = X_df
-st.session_state['Y'] = Y
-st.session_state['mod_clustered_df'] = mod_clustered_df
-st.session_state['shap_values'] = shap_values
-st.session_state['class_names'] = ['Mild', 'Moderate', 'Severe']
-st.session_state['feature_names'] = X_df.columns.tolist()
+        # --- Store data in session_state for sharing across pages ---
+        st.session_state['model'] = model
+        st.session_state['subcluster_model'] = subcluster_model
+        st.session_state['explainer'] = explainer
+        st.session_state['X_df'] = X_df
+        st.session_state['Y'] = Y
+        st.session_state['mod_clustered_df'] = mod_clustered_df
+        st.session_state['shap_values'] = shap_values
+        st.session_state['class_names'] = ['Mild', 'Moderate', 'Severe']
+        st.session_state['feature_names'] = X_df.columns.tolist()
 
+# --- 在主页运行初始化函数 ---
+initialize_data()
 
 # --- Main Page Content ---
 st.title("🩺 Patient Stratification & ML Explainability Platform")
