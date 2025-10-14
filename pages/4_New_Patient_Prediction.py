@@ -4,15 +4,35 @@ import numpy as np
 import shap
 import matplotlib.pyplot as plt
 
+# 关键改动 1: 从主应用文件导入初始化函数
+# 确保此文件与 app.py 在同一级或可被 Python 找到
+try:
+    from app import initialize_data
+except ImportError:
+    # 如果直接运行此文件或在不同结构中，提供备用路径逻辑
+    # 对于您的结构，上面的 import 应该可以工作
+    st.error("Could not import the main app. Please ensure the file structure is correct.")
+    st.stop()
+
+
+# 关键改动 2: 在页面加载时运行数据初始化
+# 这个函数会检查数据是否已加载，如果没有，它会加载数据
+initialize_data()
+
+
+# --- 页面配置和标题 ---
 st.set_page_config(layout="wide")
 st.title("🔬 New Patient Prediction")
 
 
+# --- 检查数据是否加载成功 ---
+# 这个检查现在更加可靠，因为 initialize_data() 已经被调用
 if 'model' not in st.session_state:
-    st.error("Data not loaded. Please go to the main page first to load the data.")
+    st.error("Data could not be loaded. Please ensure the main app runs correctly and return to the main page.")
     st.stop()
 
 
+# --- 从 session_state 获取加载好的数据 ---
 model = st.session_state['model']
 subcluster_model = st.session_state['subcluster_model']
 explainer = st.session_state['explainer']
@@ -21,6 +41,7 @@ feature_names = st.session_state['feature_names']
 class_names = st.session_state['class_names'] # ['Mild', 'Moderate', 'Severe']
 
 
+# --- 用户输入界面 ---
 st.header("Enter Patient Data")
 st.write("Use the fields below to enter the new patient's information.")
 
@@ -31,6 +52,7 @@ input_data = {}
 cols = st.columns(3)
 
 
+# --- 动态生成输入框 ---
 for i, feature in enumerate(feature_names):
     with cols[i % 3]:
         default_value = X_df[feature].mean()
@@ -55,31 +77,32 @@ for i, feature in enumerate(feature_names):
             input_data[feature] = st.number_input(label=feature, value=float(default_value), format="%.2f", key=feature)
 
 
+# --- 预测按钮和结果展示 ---
 if st.button("Get Prediction", type="primary"):
     st.header("Prediction Results")
 
     patient_df = pd.DataFrame([input_data], columns=feature_names)
 
-    
+    # 主模型预测
     prediction_idx = model.predict(patient_df)[0]
     prediction_label = class_names[prediction_idx]
     prediction_proba = model.predict_proba(patient_df)
 
-    
+    # 如果是 "Moderate"，进行亚群预测
     final_prediction_label = prediction_label
     if prediction_label == 'Moderate': 
         subcluster_prediction_idx = subcluster_model.predict(patient_df)[0]
         subcluster_label = "A" if subcluster_prediction_idx == 0 else "B"
         final_prediction_label = f"Moderate_{subcluster_label}"
 
-    
+    # 展示预测结果
     col1, col2 = st.columns([1, 2])
     col1.metric("Predicted Severity", final_prediction_label)
     
     proba_df = pd.DataFrame(prediction_proba, columns=class_names, index=["Probability"]).T
     col2.dataframe(proba_df.style.format("{:.2%}"))
 
-    
+    # --- SHAP 可解释性分析 ---
     st.header("Prediction Explanation (SHAP Waterfall Plots)")
     st.write("The charts below explain why the model made this prediction. Red arrows push the prediction towards a class, while blue arrows push it away.")
 
@@ -95,7 +118,11 @@ if st.button("Get Prediction", type="primary"):
             feature_names=feature_names
         )
         
-        fig, ax = plt.subplots()
-        shap.plots.waterfall(explanation, max_display=15, show=False)
-        plt.tight_layout()
-        st.pyplot(fig)
+        # 使用 try-except 避免绘图错误
+        try:
+            fig, ax = plt.subplots()
+            shap.plots.waterfall(explanation, max_display=15, show=False)
+            plt.tight_layout()
+            st.pyplot(fig)
+        except Exception as e:
+            st.error(f"Could not generate SHAP plot for class '{class_name}': {e}")
