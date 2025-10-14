@@ -49,14 +49,13 @@ for i, feature in enumerate(feature_names):
             selected_gender = st.selectbox(label=feature, options=list(gender_map.keys()), index=list(gender_map.keys()).index(default_gender_key), key=feature)
             input_data[feature] = gender_map[selected_gender]
         
-        # --- 关键改动：为 'Age' 添加特定处理 ---
         elif feature == 'Age':
             input_data[feature] = st.number_input(
                 label=feature, 
-                value=int(round(default_value)), # 将默认值转为整数
-                min_value=0,                      # 设置合理的最小值
-                max_value=120,                    # 设置合理的最小值
-                step=1,                           # 步长设为1
+                value=int(round(default_value)),
+                min_value=0,
+                max_value=120,
+                step=1,
                 key=feature
             )
 
@@ -65,8 +64,19 @@ for i, feature in enumerate(feature_names):
             default_ms = int(round(default_value))
             if default_ms not in ms_options: default_ms = ms_options[0]
             input_data[feature] = st.selectbox(label=feature, options=ms_options, index=ms_options.index(default_ms), key=feature)
+        
+        # --- 关键改动：将 'VAS' 从 slider 改为 selectbox ---
         elif feature == 'VAS':
-            input_data[feature] = st.slider(label=feature, min_value=0, max_value=10, value=int(round(default_value)), step=1, key=feature)
+            vas_options = list(range(11)) # 选项为 0 到 10
+            default_vas = int(round(default_value))
+            if default_vas not in vas_options: default_vas = vas_options[0] # 确保默认值有效
+            input_data[feature] = st.selectbox(
+                label=feature, 
+                options=vas_options, 
+                index=vas_options.index(default_vas), 
+                key=feature
+            )
+
         elif feature in ['OP', 'Smoking', 'Diabetes', 'Hypertension', 'CHD', 'OA']:
             default_yn_val = round(default_value)
             default_yn_key = [k for k, v in yes_no_map.items() if v == default_yn_val][0]
