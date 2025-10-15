@@ -35,16 +35,16 @@ feature_display_names = {
     'IVDH': 'Mean intervertebral disc height',
     'IVDHR': 'Intervertebral disc height ratio',
     'SS': 'Sacral slope',
-    'SA': 'slip angle',
-    'LL': 'lumbar lordosis',
+    'SA': 'Slip angle',
+    'LL': 'Lumbar lordosis',
     'FJA_R': 'Facet joint angles_Right',
     'FJA_L': 'Facet joint angles_Left',
-    'FJA_ABS': 'Left-Right Facet Joint Angle Difference',
+    'FJA_ABS': 'Left-Right Facet joint angle difference',
     'IVDD': 'Disc degeneration',
-    'IVDS': 'lumbar stenosis graded',
-    'D_SA': 'dynamic slip angle',
-    'D_SPD': 'dynamic slip displacement',
-    'IDH': 'lumbar disc herniation',
+    'IVDS': 'Lumbar stenosis graded',
+    'D_SA': 'Dynamic slip angle',
+    'D_SPD': 'Dynamic slip displacement',
+    'IDH': 'Lumbar disc herniation',
 }
 
 
@@ -194,3 +194,4 @@ if st.button("Get Prediction", type="primary"):
             st.pyplot(fig)
         except Exception as e:
             st.error(f"Could not generate SHAP plot for class '{class_name}': {e}")
+
