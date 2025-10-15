@@ -29,64 +29,114 @@ X_df = st.session_state['X_df']
 feature_names = st.session_state['feature_names']
 class_names = st.session_state['class_names']
 
-# 用户输入界面
+# --- 关键改动 1: 更新特征显示名称的映射 ---
+feature_display_names = {
+    'MS': 'Muscle strength',
+    'IVDH': 'Mean intervertebral disc height',
+    'IVDHR': 'Intervertebral disc height ratio',
+    'SS': 'Sacral slope',
+    'SA': 'slip angle',
+    'LL': 'lumbar lordosis',
+    'FJA_R': 'Facet joint angles_Right',
+    'FJA_L': 'Facet joint angles_Left',
+    'FJA_ABS': 'Left-Right Facet Joint Angle Difference',
+    'IVDD': 'Disc degeneration',
+    'IVDS': 'lumbar stenosis graded',
+    'D_SA': 'dynamic slip angle',
+    'D_SPD': 'dynamic slip displacement',
+    'IDH': 'lumbar disc herniation',
+}
+
+
+# --- 用户输入界面 ---
 st.header("Enter Patient Data")
 st.write("Use the fields below to enter the new patient's information.")
 
 gender_map = {'Male': 1, 'Female': 0}
 yes_no_map = {'Yes': 1, 'No': 0}
 
+idh_options = [
+    "No herniation", 
+    "Herniation at the slipped segment", 
+    "Bulging at the slipped segment", 
+    "Herniation/bulging at non-slipped segments"
+]
+idh_map = {option: i for i, option in enumerate(idh_options)}
+
+# --- 关键改动 2: 为 Disc degeneration (IVDD) 创建选项和值映射 ---
+ivdd_options = ['I', 'II', 'III', 'IV', 'V']
+# 假设模型训练时使用的值是 1, 2, 3, 4, 5
+ivdd_map = {option: i + 1 for i, option in enumerate(ivdd_options)}
+
+
 input_data = {}
 cols = st.columns(3)
 
-# 动态生成输入框
+# --- 动态生成输入框 ---
 for i, feature in enumerate(feature_names):
     with cols[i % 3]:
+        display_label = feature_display_names.get(feature, feature)
         default_value = X_df[feature].mean()
+
         if feature == 'Gender':
             default_gender_val = round(default_value)
             default_gender_key = [k for k, v in gender_map.items() if v == default_gender_val][0]
-            selected_gender = st.selectbox(label=feature, options=list(gender_map.keys()), index=list(gender_map.keys()).index(default_gender_key), key=feature)
+            selected_gender = st.selectbox(label=display_label, options=list(gender_map.keys()), index=list(gender_map.keys()).index(default_gender_key), key=feature)
             input_data[feature] = gender_map[selected_gender]
         
         elif feature == 'Age':
             input_data[feature] = st.number_input(
-                label=feature, 
+                label=display_label, 
                 value=int(round(default_value)),
-                min_value=0,
-                max_value=120,
-                step=1,
-                key=feature
+                min_value=0, max_value=120, step=1, key=feature
             )
 
         elif feature == 'MS':
             ms_options = [0, 1, 2, 3, 4, 5]
             default_ms = int(round(default_value))
             if default_ms not in ms_options: default_ms = ms_options[0]
-            input_data[feature] = st.selectbox(label=feature, options=ms_options, index=ms_options.index(default_ms), key=feature)
+            input_data[feature] = st.selectbox(label=display_label, options=ms_options, index=ms_options.index(default_ms), key=feature)
         
-        # --- 关键改动：将 'VAS' 从 slider 改为 selectbox ---
         elif feature == 'VAS':
-            vas_options = list(range(11)) # 选项为 0 到 10
+            vas_options = list(range(11))
             default_vas = int(round(default_value))
-            if default_vas not in vas_options: default_vas = vas_options[0] # 确保默认值有效
-            input_data[feature] = st.selectbox(
-                label=feature, 
-                options=vas_options, 
-                index=vas_options.index(default_vas), 
+            if default_vas not in vas_options: default_vas = vas_options[0]
+            input_data[feature] = st.selectbox(label=display_label, options=vas_options, index=vas_options.index(default_vas), key=feature)
+
+        elif feature == 'IDH':
+            default_idh_val = int(round(default_value))
+            if default_idh_val not in range(len(idh_options)): default_idh_val = 0
+            selected_idh_text = st.selectbox(
+                label=display_label,
+                options=idh_options,
+                index=default_idh_val,
                 key=feature
             )
+            input_data[feature] = idh_map[selected_idh_text]
+
+        # --- 关键改动 3: 为 IVDD 添加新的下拉菜单逻辑 ---
+        elif feature == 'IVDD':
+            default_ivdd_val = int(round(default_value))
+            if default_ivdd_val not in ivdd_map.values(): default_ivdd_val = 1 # 默认等级 I
+            # 根据值反向查找对应的选项文本
+            default_ivdd_key = [k for k, v in ivdd_map.items() if v == default_ivdd_val][0]
+            selected_ivdd_text = st.selectbox(
+                label=display_label,
+                options=ivdd_options,
+                index=ivdd_options.index(default_ivdd_key),
+                key=feature
+            )
+            input_data[feature] = ivdd_map[selected_ivdd_text]
 
         elif feature in ['OP', 'Smoking', 'Diabetes', 'Hypertension', 'CHD', 'OA']:
             default_yn_val = round(default_value)
             default_yn_key = [k for k, v in yes_no_map.items() if v == default_yn_val][0]
-            selected_yn = st.selectbox(label=feature, options=list(yes_no_map.keys()), index=list(yes_no_map.keys()).index(default_yn_key), key=feature)
+            selected_yn = st.selectbox(label=display_label, options=list(yes_no_map.keys()), index=list(yes_no_map.keys()).index(default_yn_key), key=feature)
             input_data[feature] = yes_no_map[selected_yn]
         else:
-            # 其他所有数值型特征保持不变
-            input_data[feature] = st.number_input(label=feature, value=float(default_value), format="%.2f", key=feature)
+            input_data[feature] = st.number_input(label=display_label, value=float(default_value), format="%.2f", key=feature)
 
-# 预测按钮和结果展示
+# --- 预测按钮和结果展示 (无变化) ---
 if st.button("Get Prediction", type="primary"):
     st.header("Prediction Results")
 
