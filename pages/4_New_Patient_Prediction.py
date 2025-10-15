@@ -29,22 +29,22 @@ X_df = st.session_state['X_df']
 feature_names = st.session_state['feature_names']
 class_names = st.session_state['class_names']
 
-# --- 关键改动 1: 更新特征显示名称的映射 ---
+# --- 特征显示名称的映射 ---
 feature_display_names = {
     'MS': 'Muscle strength',
     'IVDH': 'Mean intervertebral disc height',
     'IVDHR': 'Intervertebral disc height ratio',
     'SS': 'Sacral slope',
-    'SA': 'Slip angle',
-    'LL': 'Lumbar lordosis',
+    'SA': 'slip angle',
+    'LL': 'lumbar lordosis',
     'FJA_R': 'Facet joint angles_Right',
     'FJA_L': 'Facet joint angles_Left',
-    'FJA_ABS': 'Left-Right Facet joint angle difference',
+    'FJA_ABS': 'Left-Right Facet Joint Angle Difference',
     'IVDD': 'Disc degeneration',
-    'IVDS': 'Lumbar stenosis graded',
-    'D_SA': 'Dynamic slip angle',
-    'D_SPD': 'Dynamic slip displacement',
-    'IDH': 'Lumbar disc herniation',
+    'IVDS': 'lumbar stenosis graded',
+    'D_SA': 'dynamic slip angle',
+    'D_SPD': 'dynamic slip displacement',
+    'IDH': 'lumbar disc herniation',
 }
 
 
@@ -63,10 +63,13 @@ idh_options = [
 ]
 idh_map = {option: i for i, option in enumerate(idh_options)}
 
-# --- 关键改动 2: 为 Disc degeneration (IVDD) 创建选项和值映射 ---
 ivdd_options = ['I', 'II', 'III', 'IV', 'V']
-# 假设模型训练时使用的值是 1, 2, 3, 4, 5
 ivdd_map = {option: i + 1 for i, option in enumerate(ivdd_options)}
+
+# --- 关键改动 1: 为 lumbar stenosis graded (IVDS) 创建选项和值映射 ---
+ivds_options = ['A1', 'A2', 'A3', 'A4', 'B', 'C', 'D']
+# 对应值为 1 到 7
+ivds_map = {option: i + 1 for i, option in enumerate(ivds_options)}
 
 
 input_data = {}
@@ -114,11 +117,9 @@ for i, feature in enumerate(feature_names):
             )
             input_data[feature] = idh_map[selected_idh_text]
 
-        # --- 关键改动 3: 为 IVDD 添加新的下拉菜单逻辑 ---
         elif feature == 'IVDD':
             default_ivdd_val = int(round(default_value))
-            if default_ivdd_val not in ivdd_map.values(): default_ivdd_val = 1 # 默认等级 I
-            # 根据值反向查找对应的选项文本
+            if default_ivdd_val not in ivdd_map.values(): default_ivdd_val = 1
             default_ivdd_key = [k for k, v in ivdd_map.items() if v == default_ivdd_val][0]
             selected_ivdd_text = st.selectbox(
                 label=display_label,
@@ -127,6 +128,19 @@ for i, feature in enumerate(feature_names):
                 key=feature
             )
             input_data[feature] = ivdd_map[selected_ivdd_text]
+
+        # --- 关键改动 2: 为 IVDS 添加新的下拉菜单逻辑 ---
+        elif feature == 'IVDS':
+            default_ivds_val = int(round(default_value))
+            if default_ivds_val not in ivds_map.values(): default_ivds_val = 1 # 默认 A1
+            default_ivds_key = [k for k, v in ivds_map.items() if v == default_ivds_val][0]
+            selected_ivds_text = st.selectbox(
+                label=display_label,
+                options=ivds_options,
+                index=ivds_options.index(default_ivds_key),
+                key=feature
+            )
+            input_data[feature] = ivds_map[selected_ivds_text]
 
         elif feature in ['OP', 'Smoking', 'Diabetes', 'Hypertension', 'CHD', 'OA']:
             default_yn_val = round(default_value)
@@ -180,5 +194,3 @@ if st.button("Get Prediction", type="primary"):
             st.pyplot(fig)
         except Exception as e:
             st.error(f"Could not generate SHAP plot for class '{class_name}': {e}")
-
-
