@@ -39,7 +39,7 @@ feature_display_names = {
     'LL': 'Lumbar lordosis',
     'FJA_R': 'Facet joint angles_Right',
     'FJA_L': 'Facet joint angles_Left',
-    'FJA_ABS': 'Left-Right Facet Joint Angle Difference',
+    'FJA_ABS': 'Left-Right Facet joint angle difference',
     'IVDD': 'Disc degeneration',
     'IVDS': 'Lumbar stenosis graded',
     'D_SA': 'Dynamic slip angle',
@@ -180,4 +180,5 @@ if st.button("Get Prediction", type="primary"):
             st.pyplot(fig)
         except Exception as e:
             st.error(f"Could not generate SHAP plot for class '{class_name}': {e}")
+
 
