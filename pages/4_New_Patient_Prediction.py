@@ -66,17 +66,24 @@ idh_map = {option: i for i, option in enumerate(idh_options)}
 ivdd_options = ['I', 'II', 'III', 'IV', 'V']
 ivdd_map = {option: i + 1 for i, option in enumerate(ivdd_options)}
 
-# --- 关键改动 1: 为 lumbar stenosis graded (IVDS) 创建选项和值映射 ---
 ivds_options = ['A1', 'A2', 'A3', 'A4', 'B', 'C', 'D']
-# 对应值为 1 到 7
 ivds_map = {option: i + 1 for i, option in enumerate(ivds_options)}
+
+
+# --- 关键改动: 重新排列特征顺序 ---
+# 定义希望排在前面的特征
+prioritized_features = ['Age', 'Gender', 'Smoking', 'Diabetes', 'Hypertension', 'CHD', 'OA', 'OP']
+# 从原始特征列表中筛选出剩余的特征
+remaining_features = [f for f in feature_names if f not in prioritized_features]
+# 合并成新的有序列表
+ordered_feature_names = prioritized_features + remaining_features
 
 
 input_data = {}
 cols = st.columns(3)
 
-# --- 动态生成输入框 ---
-for i, feature in enumerate(feature_names):
+# --- 动态生成输入框 (使用新的有序列表) ---
+for i, feature in enumerate(ordered_feature_names):
     with cols[i % 3]:
         display_label = feature_display_names.get(feature, feature)
         default_value = X_df[feature].mean()
@@ -129,10 +136,9 @@ for i, feature in enumerate(feature_names):
             )
             input_data[feature] = ivdd_map[selected_ivdd_text]
 
-        # --- 关键改动 2: 为 IVDS 添加新的下拉菜单逻辑 ---
         elif feature == 'IVDS':
             default_ivds_val = int(round(default_value))
-            if default_ivds_val not in ivds_map.values(): default_ivds_val = 1 # 默认 A1
+            if default_ivds_val not in ivds_map.values(): default_ivds_val = 1
             default_ivds_key = [k for k, v in ivds_map.items() if v == default_ivds_val][0]
             selected_ivds_text = st.selectbox(
                 label=display_label,
@@ -194,4 +200,3 @@ if st.button("Get Prediction", type="primary"):
             st.pyplot(fig)
         except Exception as e:
             st.error(f"Could not generate SHAP plot for class '{class_name}': {e}")
-
